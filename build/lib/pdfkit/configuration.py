@@ -5,7 +5,7 @@ import sys
 
 
 class Configuration(object):
-    def __init__(self, wkhtmltopdf='', meta_tag_prefix='pdfkit-', environ=''):
+    def __init__(self, wkhtmltopdf='', meta_tag_prefix='pdfkit-', environ={}):
         self.meta_tag_prefix = meta_tag_prefix
 
         self.wkhtmltopdf = wkhtmltopdf
@@ -30,8 +30,8 @@ class Configuration(object):
         self.environ = environ
 
         if not self.environ:
-            self.environ = os.environ
+            env = os.environ
 
-        for key in self.environ.keys():
-            if not isinstance(self.environ[key], str):
-                self.environ[key] = str(self.environ[key])
+            for key in env.keys():
+                if not isinstance(env[key], str):
+                    self.environ[key] = str(env[key])
