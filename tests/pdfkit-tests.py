@@ -11,13 +11,15 @@ import pytest_asyncio.plugin
 
 import pdfkit
 
+from . import TESTS_ROOT
+
 if sys.version_info[0] == 2 and sys.version_info[1] == 7:
     unittest.TestCase.assertRegex = unittest.TestCase.assertRegexpMatches
 
 
 #Prepend ../ to PYTHONPATH so that we can import PDFKIT form there.
-TESTS_ROOT = os.path.abspath(os.path.dirname(__file__))
-sys.path.insert(0, os.path.realpath(os.path.join(TESTS_ROOT, '..')))
+# TESTS_ROOT = os.path.abspath(os.path.realpath(__file__))
+# sys.path.insert(0, os.path.realpath(os.path.join(TESTS_ROOT)))
 
 
 
@@ -33,19 +35,19 @@ class TestPDFKitInitialization(unittest.TestCase):
         self.assertTrue(r.source.isUrl())
 
     def test_file_source(self):
-        r = pdfkit.PDFKit('fixtures/example.html', 'file')
+        r = pdfkit.PDFKit(f'{TESTS_ROOT}/fixtures/example.html', 'file')
         self.assertTrue(r.source.isFile())
 
     def test_file_object_source(self):
-        with open('fixtures/example.html') as fl:
+        with open(f'{TESTS_ROOT}/fixtures/example.html') as fl:
             r = pdfkit.PDFKit(fl, 'file')
             self.assertTrue(r.source.isFileObj())
 
     def test_file_source_with_path(self):
         r = pdfkit.PDFKit('test', 'string')
-        with io.open('fixtures/example.css') as f:
+        with io.open(f'{TESTS_ROOT}/fixtures/example.css') as f:
             self.assertTrue(r.source.isFile(path=f))
-        with codecs.open('fixtures/example.css', encoding='UTF-8') as f:
+        with codecs.open(f'{TESTS_ROOT}/fixtures/example.css', encoding='UTF-8') as f:
             self.assertTrue(r.source.isFile(path=f))
 
     def test_options_parsing(self):
@@ -132,13 +134,13 @@ class TestPDFKitCommandGeneration(unittest.TestCase):
 
     def test_lists_of_input_args(self):
         urls = ['http://ya.ru', 'http://google.com']
-        paths = ['fixtures/example.html', 'fixtures/example.html']
+        paths = [f'{TESTS_ROOT}/fixtures/example.html', f'{TESTS_ROOT}/fixtures/example.html']
         r = pdfkit.PDFKit(urls, 'url')
         r2 = pdfkit.PDFKit(paths, 'file')
         cmd = r.command()
         cmd2 = r2.command()
         self.assertEqual(cmd[-3:], ['http://ya.ru', 'http://google.com', '-'])
-        self.assertEqual(cmd2[-3:], ['fixtures/example.html', 'fixtures/example.html', '-'])
+        self.assertEqual(cmd2[-3:], [f'{TESTS_ROOT}/fixtures/example.html', f'{TESTS_ROOT}/fixtures/example.html', '-'])
 
     def test_read_source_from_stdin(self):
         r = pdfkit.PDFKit('html', 'string')
@@ -149,14 +151,14 @@ class TestPDFKitCommandGeneration(unittest.TestCase):
         self.assertEqual(r.command()[-2:], ['http://ya.ru', '-'])
 
     def test_file_path_in_command(self):
-        path = 'fixtures/example.html'
+        path = f'{TESTS_ROOT}/fixtures/example.html'
         r = pdfkit.PDFKit(path, 'file')
         self.assertEqual(r.command()[-2:], [path, '-'])
 
     def test_output_path(self):
-        out = '/test/test2/out.pdf'
+        out = '/tmp/test2/out.pdf'
         r = pdfkit.PDFKit('html', 'string')
-        self.assertEqual(r.command(out)[-1:], ['/test/test2/out.pdf'])
+        self.assertEqual(r.command(out)[-1:], ['/tmp/test2/out.pdf'])
 
     def test_pdfkit_meta_tags(self):
         body = """
@@ -330,27 +332,27 @@ class TestPDFKitGeneration(asynctest.TestCase):
     def test_stylesheet_adding_to_the_head(self):
         #TODO rewrite this part of pdfkit.py
         r = pdfkit.PDFKit('<html><head></head><body>Hai!</body></html>', 'string',
-                          css='fixtures/example.css')
+                          css=f'{TESTS_ROOT}/fixtures/example.css')
 
-        with open('fixtures/example.css') as f:
+        with open(f'{TESTS_ROOT}/fixtures/example.css') as f:
             css = f.read()
 
-        r._prepend_css('fixtures/example.css')
+        r._prepend_css(f'{TESTS_ROOT}/fixtures/example.css')
         self.assertIn('<style>%s</style>' % css, r.source.to_s())
 
     def test_stylesheet_adding_without_head_tag(self):
         r = pdfkit.PDFKit('<html><body>Hai!</body></html>', 'string',
-                          options={'quiet': None}, css='fixtures/example.css')
+                          options={'quiet': None}, css=f'{TESTS_ROOT}/fixtures/example.css')
 
-        with open('fixtures/example.css') as f:
+        with open(f'{TESTS_ROOT}/fixtures/example.css') as f:
             css = f.read()
 
-        r._prepend_css('fixtures/example.css')
+        r._prepend_css(f'{TESTS_ROOT}/fixtures/example.css')
         self.assertIn('<style>%s</style><html>' % css, r.source.to_s())
 
     def test_multiple_stylesheets_adding_to_the_head(self):
         #TODO rewrite this part of pdfkit.py
-        css_files = ['fixtures/example.css', 'fixtures/example2.css']
+        css_files = [f'{TESTS_ROOT}/fixtures/example.css', f'{TESTS_ROOT}/fixtures/example2.css']
         r = pdfkit.PDFKit('<html><head></head><body>Hai!</body></html>', 'string',
                           css=css_files)
 
@@ -363,7 +365,7 @@ class TestPDFKitGeneration(asynctest.TestCase):
         self.assertIn('<style>%s</style>' % "\n".join(css), r.source.to_s())
 
     def test_multiple_stylesheet_adding_without_head_tag(self):
-        css_files = ['fixtures/example.css', 'fixtures/example2.css']
+        css_files = [f'{TESTS_ROOT}/fixtures/example.css', f'{TESTS_ROOT}/fixtures/example2.css']
         r = pdfkit.PDFKit('<html><body>Hai!</body></html>', 'string',
                           options={'quiet': None}, css=css_files)
 
@@ -377,15 +379,15 @@ class TestPDFKitGeneration(asynctest.TestCase):
 
     @pytest.mark.asyncio
     async def test_stylesheet_throw_error_when_url(self):
-        r = pdfkit.PDFKit('http://ya.ru', 'url', css='fixtures/example.css')
+        r = pdfkit.PDFKit('http://ya.ru', 'url', css=f'{TESTS_ROOT}/fixtures/example.css')
 
         with self.assertRaises(r.ImproperSourceError):
             await r.to_pdf()
 
     @pytest.mark.asyncio
     def test_stylesheet_adding_to_file_with_option(self):
-        css = 'fixtures/example.css'
-        r = pdfkit.PDFKit('fixtures/example.html', 'file', css=css)
+        css = f'{TESTS_ROOT}/fixtures/example.css'
+        r = pdfkit.PDFKit(f'{TESTS_ROOT}/fixtures/example.html', 'file', css=css)
         self.assertEqual(r.css, css)
         r._prepend_css(css)
         self.assertIn('font-size', r.source.to_s())
@@ -398,15 +400,15 @@ class TestPDFKitGeneration(asynctest.TestCase):
 
     @pytest.mark.asyncio
     async def test_pdf_generation_from_file_like(self):
-        with open('fixtures/example.html', 'r') as f:
+        with open(f'{TESTS_ROOT}/fixtures/example.html', 'r') as f:
             r = pdfkit.PDFKit(f, 'file')
             output = await r.to_pdf()
         self.assertEqual(output[:4].decode('utf-8'), '%PDF')
 
     @pytest.mark.asyncio
     async def test_raise_error_with_wrong_css_path(self):
-        css = 'fixtures/wrongpath.css'
-        r = pdfkit.PDFKit('fixtures/example.html', 'file', css=css)
+        css = f'{TESTS_ROOT}/fixtures/wrongpath.css'
+        r = pdfkit.PDFKit(f'{TESTS_ROOT}/fixtures/example.html', 'file', css=css)
         with self.assertRaises(IOError):
             await r.to_pdf()
 
